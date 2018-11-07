@@ -16,6 +16,8 @@ TIME_KEY     = EDACC_WALL_TIME
 
 
 def main():
+    verbose = True
+
     parser = argparse.ArgumentParser(description='ranking EDACC CSV')
     parser.add_argument('filename_edacc_csv', metavar='<edacc_csv>',
                      help="File containing the benchmark")
@@ -28,6 +30,10 @@ def main():
                         action="store_true",
                         help='remove unknown instances')
 
+    parser.add_argument('--remove-timeout', dest='rm_timeout',
+                        action="store_true",
+                        help='remove timeout instances')
+
     parser.add_argument('--add-vbs', dest='add_vbs',
                         action="store_true",
                         help='remove unknown instances')
@@ -38,6 +44,9 @@ def main():
     parser.add_argument('--timeout', dest='timeout',
                         type=int, default=5000,
                         help='remove unknown instances')
+
+    parser.add_argument('--filter-output', dest='filter_output',
+                        help='filename of filtered output csv')
 
     args = parser.parse_args()
 
@@ -53,6 +62,16 @@ def main():
         df = remove_memory(df)
     if args.rm_unknown:
         df = remove_unknown(df)
+    if args.rm_timeout:
+        df = remove_timeout(df)
+
+    if args.filter_output != None:
+        out = df.to_csv(index=False, quotechar='"', quoting=csv.QUOTE_ALL)
+        f = open(args.filter_output, "w+")
+        print(out, file=f)
+        f.close()
+        if verbose:
+            print("Output CSV written in", args.filter_output)
 
 
     df = add_parX(df, timeout=args.timeout)
@@ -61,7 +80,7 @@ def main():
     if args.add_vbs:
         df = add_vbs_solver(df)
 
-    ranking(df)
+    ranking(df, verbose)
 
 def column_no_duplicate(df, column):
     assert(column in df.columns)
@@ -74,7 +93,7 @@ def keep_only_solvers(df, solvers):
     for solver in column_no_duplicate(df, SOLVER_KEY):
         is_solver = df[SOLVER_KEY] == solver
         if solver not in solvers:
-            df = df.drop(df[is_solver].index)
+            df.drop(df[is_solver].index, inplace=True)
     return df
 
 
@@ -105,7 +124,7 @@ def add_cti(df):
     return df
 
 def add_vbs_solver(df):
-    output = df.copy()
+    output = []
     for instance in column_no_duplicate(df, INSTANCE_KEY):
         is_instance = df[INSTANCE_KEY] == instance
 
@@ -120,38 +139,35 @@ def add_vbs_solver(df):
             idx = df[(is_instance) & (is_complete)][TIME_KEY].idxmin()
 
         row = df.loc[idx].copy()
-        row[SOLVER_KEY] = "VBS"
-        row[EDACC_SOLVER]               = "VBS"
+        row[SOLVER_KEY]   = "VBS"
 
-        output = output.append(row)
+        output += [row]
 
-    return output
+    return df.append(output)
 
-def remove_with(df, column, at_leat_one=True, all_solvers=True):
-    output = pd.DataFrame()
-    frames = []
-
-
+def remove_with(df, column, at_leat_one=True, all_solvers=False):
     num_solvers = len(column_no_duplicate(df, SOLVER_KEY))
     for instance in column_no_duplicate(df, INSTANCE_KEY):
         is_instance = df[INSTANCE_KEY] == instance
         is_column  = df[RESULT_KEY] == column
 
         num_column = len(df[(is_instance) & (is_column)].index)
-        if all_solvers and num_column == num_solvers:
-            df = df.drop(df[is_instance].index)
-        elif at_leat_one and num_column > 0:
-            df = df.drop(df[is_instance].index)
+        if (all_solvers and num_column == num_solvers) or \
+           (at_leat_one and num_column > 0):
+            df.drop(df[is_instance].index, inplace=True)
 
     return df
 
 def remove_memory(df):
-    return remove_with(df, MEMORY)
+    return remove_with(df, MEMORY, at_leat_one=True, all_solvers=False)
 
 def remove_unknown(df):
-    return remove_with(df, UNKNOWN)
+    return remove_with(df, UNKNOWN, at_leat_one=True, all_solvers=False)
 
-def ranking(df):
+def remove_timeout(df):
+    return remove_with(df, TIMEOUT, at_leat_one=False, all_solvers=True)
+
+def ranking(df, verbose):
     num_solvers = len(column_no_duplicate(df, SOLVER_KEY))
 
     TOTAL = "TOTAL (" + str(int(len(df.index) / num_solvers)) + ")"
@@ -167,8 +183,6 @@ def ranking(df):
 
     datas = pd.DataFrame(columns=keys)
     fmt='psql'
-
-    verbose = True
 
     ERR_WS     =  -11111111
     ERR_WS_MSG = 'wrong sat'
