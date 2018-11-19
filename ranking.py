@@ -41,6 +41,10 @@ def main():
     parser.add_argument('--solvers', nargs='?', dest='solvers',
                         help='list of wanted solvers')
 
+    parser.add_argument('--query', nargs='?', dest='query',
+                        help='filter df with query in form: '
+                        'solver column operator value')
+
     parser.add_argument('--timeout', dest='timeout',
                         type=int, default=5000,
                         help='remove unknown instances')
@@ -64,6 +68,11 @@ def main():
         df = remove_unknown(df)
     if args.rm_timeout:
         df = remove_timeout(df)
+
+    if args.query:
+        queries = [s.strip() for s in args.query.split(',')]
+        for query in queries:
+            remove_with_query(df, query)
 
     if args.filter_output != None:
         out = df.to_csv(index=False, quotechar='"', quoting=csv.QUOTE_ALL)
@@ -166,6 +175,26 @@ def remove_unknown(df):
 
 def remove_timeout(df):
     return remove_with(df, TIMEOUT, at_leat_one=False, all_solvers=True)
+
+def remove_with_query(df, query_params):
+    solver, column, operator, value = query_params.split()
+    # Some checks
+    assert(solver and column and operator and value)
+    assert(solver in column_no_duplicate(df, SOLVER_KEY))
+    assert(column in df.columns)
+    for c in operator: assert(c in "<>=")
+
+    query = "(df[\"{col}\"] {op} {value}) | (df[\"{col}\"].isnull())".format(
+        col=column, op=operator, value=value)
+
+    for instance in column_no_duplicate(df, INSTANCE_KEY):
+        is_instance = df[INSTANCE_KEY] == instance
+        is_solver = df[SOLVER_KEY] == solver
+        is_query = eval(query)
+
+        if len(df[(is_instance) & (is_solver) & (is_query)].index) > 0:
+            df.drop(df[is_instance].index, inplace=True)
+
 
 def ranking(df, verbose):
     num_solvers = len(column_no_duplicate(df, SOLVER_KEY))
