@@ -7,6 +7,7 @@ import numpy as np
 import argparse
 
 from tabulate import tabulate
+from utils     import *
 from constants import *
 
 INSTANCE_KEY = EDACC_INSTANCE_MD5
@@ -47,7 +48,7 @@ def main():
 
     parser.add_argument('--timeout', dest='timeout',
                         type=int, default=5000,
-                        help='remove unknown instances')
+                        help='timeout')
 
     parser.add_argument('--filter-output', dest='filter_output',
                         help='filename of filtered output csv')
@@ -90,21 +91,6 @@ def main():
         df = add_vbs_solver(df)
 
     ranking(df, verbose)
-
-def column_no_duplicate(df, column):
-    assert(column in df.columns)
-    return np.unique(df[column])
-
-def keep_only_solvers(df, solvers):
-    for solver in solvers:
-        assert(solver in column_no_duplicate(df, SOLVER_KEY))
-
-    for solver in column_no_duplicate(df, SOLVER_KEY):
-        is_solver = df[SOLVER_KEY] == solver
-        if solver not in solvers:
-            df.drop(df[is_solver].index, inplace=True)
-    return df
-
 
 def add_parX(df, X=2, timeout=5000):
     is_not_sat     = df[RESULT_KEY] != SAT
