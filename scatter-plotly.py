@@ -120,7 +120,7 @@ def scatter_plot(df, s1, s2, output="scatter.pdf", limit=None, title=None,
         text=df_sat[EDACC_INSTANCE],
         mode='markers',
         name="SAT",
-        marker=dict(symbol="x", color="blue", size=10)
+        marker=dict(symbol="x", color="b", size=10)
     )
 
     linestyle = dict(color='black', dash='dash')
