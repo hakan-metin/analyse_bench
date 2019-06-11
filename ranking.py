@@ -10,11 +10,6 @@ from tabulate import tabulate
 from utils     import *
 from constants import *
 
-INSTANCE_KEY = EDACC_INSTANCE_MD5
-SOLVER_KEY   = EDACC_SOLVER_CONFIGURATION
-RESULT_KEY   = EDACC_RESULT_CODE
-TIME_KEY     = EDACC_WALL_TIME
-
 
 def main():
     verbose = True
