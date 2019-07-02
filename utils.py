@@ -13,7 +13,7 @@ def column_no_duplicate(df, column):
     return np.unique(df[column])
 
 
-def guess_limit(df):
+def guess_limit(df, key=TIME_KEY):
     limit = 0
     for instance in column_no_duplicate(df, INSTANCE_KEY):
         is_instance = df[INSTANCE_KEY] == instance
@@ -24,7 +24,7 @@ def guess_limit(df):
         is_complete = (is_sat) | (is_unsat)
 
         if len(df[(is_instance) & (is_complete)].index) > 0:
-            limit = max(limit, max(df[(is_instance) & (is_complete)][TIME_KEY]))
+            limit = max(limit, max(df[(is_instance) & (is_complete)][key]))
     return limit
 
 def keep_only_solvers(df, solvers):

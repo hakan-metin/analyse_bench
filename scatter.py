@@ -33,6 +33,13 @@ def main():
                         default=None,
                         help='titleof scatter plot')
 
+    parser.add_argument('--key', dest='key',
+                        help='scatter plot in this key (default wall time)')
+
+    parser.add_argument('--logscale', dest='is_logscale',
+                        action="store_true",
+                        help='scatter plot in log scale')
+
     parser.add_argument('--s1', dest='s1', metavar='<s1>',
                         help='first solver')
     parser.add_argument('--s2', dest='s2', metavar='<s2>',
@@ -44,6 +51,10 @@ def main():
     filename_edacc_csv = args.filename_edacc_csv
     df = pd.read_csv(filename_edacc_csv)
 
+    key = TIME_KEY
+    if args.key:
+        key = args.key
+    df[key] = pd.to_numeric(df[key], errors='coerce')
 
     if not args.s1 or not args.s2:
         print("Need solvers names option --s1 and --s2")
@@ -52,20 +63,20 @@ def main():
     solver_one = args.s1
     solver_two = args.s2
 
-
     limit = None
     if args.timeout:
         limit = args.timeout
 
     scatter_plot(df, solver_one, solver_two, limit=limit,
-                 output=args.output, title=args.title)
+                 output=args.output, title=args.title, key=key,
+                 is_logscale=args.is_logscale)
 
     if args.is_interactive:
         plt.show()
 
 
 def scatter_plot(df, s1, s2, output="scatter.pdf", limit=None, title=None,
-                 key=TIME_KEY):
+                 key=TIME_KEY, is_logscale=False):
     df = df.copy()
 
     solvers = [s1, s2]
@@ -75,7 +86,7 @@ def scatter_plot(df, s1, s2, output="scatter.pdf", limit=None, title=None,
 
     # Guess limit
     if limit == None:
-        limit = guess_limit(df)
+        limit = guess_limit(df, key)
 
     is_fail = (df[RESULT_KEY] != SAT) & (df[RESULT_KEY] != UNSAT)
     df.loc[is_fail, key] = limit * 1.1
@@ -111,14 +122,20 @@ def scatter_plot(df, s1, s2, output="scatter.pdf", limit=None, title=None,
         ax = df_sat.plot.scatter(s1, s2, ax=ax,
         marker="x", color="blue_1", linestyle="None", label="SAT", alpha=0.85)
 
-    if ax != None:
-        ax.grid(color='gray', linestyle='--', linewidth=1, alpha=0.6)
-        ax.set_aspect('equal')
 
     plt.rcParams.update({'font.size': 13})
 
     plt.xlim(0, limit * 1.15)
     plt.ylim(0, limit * 1.15)
+
+    if ax != None:
+        ax.grid(color='gray', linestyle='--', linewidth=1, alpha=0.6)
+        if not is_logscale:
+            ax.set_aspect('equal')
+
+    if  is_logscale:
+        plt.yscale('symlog')
+        plt.xscale('symlog')
 
     plt.plot([0, limit * 1.05], [0, limit * 1.05],
              color="black", linestyle="--", alpha=0.6)
@@ -128,6 +145,7 @@ def scatter_plot(df, s1, s2, output="scatter.pdf", limit=None, title=None,
              linestyle="--", color="black", alpha=0.6)
     plt.legend(numpoints=1, ncol=2, markerfirst=False, loc="center",
                bbox_to_anchor=(0.5, -0.20))
+
 
     if title != None:
         plt.title(title, loc='center')

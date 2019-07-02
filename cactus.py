@@ -20,19 +20,19 @@ def main():
 
     parser.add_argument('--interactive', dest='is_interactive',
                         action="store_true",
-                        help='scatter plot interactive')
+                        help='cactus plot interactive')
 
     parser.add_argument('--timeout', dest='timeout',
                         type=int,
                         help='timeout')
 
     parser.add_argument('-o', '--output', dest='output',
-                        default="scatter.pdf",
-                        help='output file of scatter plot')
+                        default="cactus.pdf",
+                        help='output file of cactus plot')
 
     parser.add_argument('--title', dest='title',
                         default=None,
-                        help='titleof scatter plot')
+                        help='titleof cactus plot')
 
     parser.add_argument('-c', '--cumsum', dest='is_cumsum',
                         action="store_true",
@@ -62,18 +62,20 @@ def main():
         mezcal = args.is_mezcal
 
 
-    cactus_plot(df, limit=limit, output=args.output, mezcal=mezcal, cumsum=cumsum, title=args.title)
+    cactus_plot(df, limit=limit, output=args.output, mezcal=mezcal,
+                cumsum=cumsum, title=args.title)
 
     if args.is_interactive:
         plt.show()
 
 
-def cactus_plot(df, output='cactus.pdf', mezcal=False, cumsum=False, limit=None, title=None):
+def cactus_plot(df, output='cactus.pdf', mezcal=False, cumsum=False,
+                limit=None, title=None, key=TIME_KEY):
     ax = None
 
     # Guess limit
     if limit == None:
-        limit = guess_limit(df)
+        limit = guess_limit(df, key)
 
     my_color_list  = ['blue_1', 'red_1', 'green_1', 'orange_1', 'brown_2',
                       'pink_1', 'purple_1', 'silver']
@@ -116,6 +118,7 @@ def cactus_plot(df, output='cactus.pdf', mezcal=False, cumsum=False, limit=None,
     plt.legend(numpoints=1, markerfirst=False, loc="best")
 
     plt.savefig(output, transparent=False, bbox_inches='tight')
+    print("Output in", output)
 
     plt.rcParams.update(plt.rcParamsDefault)
 

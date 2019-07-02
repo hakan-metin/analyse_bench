@@ -48,6 +48,11 @@ def main():
     parser.add_argument('--filter-output', dest='filter_output',
                         help='filename of filtered output csv')
 
+    parser.add_argument('--rename', nargs='?', dest='rename',
+                        help='rename solver in format '
+                        'solver=new_name')
+
+
     args = parser.parse_args()
 
     filename_edacc_csv = args.filename_edacc_csv
@@ -64,6 +69,12 @@ def main():
         df = remove_unknown(df)
     if args.rm_timeout:
         df = remove_timeout(df)
+
+    if args.rename:
+        renames = [s.strip() for s in args.rename.split(',')]
+        for r in renames:
+            df = rename_solver(df, r)
+
 
     if args.query:
         queries = [s.strip() for s in args.query.split(',')]
@@ -176,6 +187,11 @@ def remove_with_query(df, query_params):
         if len(df[(is_instance) & (is_solver) & (is_query)].index) > 0:
             df.drop(df[is_instance].index, inplace=True)
 
+def rename_solver(df, rename_params):
+    solver, new_name = rename_params.split('=')
+    assert(solver in column_no_duplicate(df, SOLVER_KEY))
+    df[SOLVER_KEY] = df[SOLVER_KEY].replace(solver, new_name)
+    return df
 
 def ranking(df, verbose):
     num_solvers = len(column_no_duplicate(df, SOLVER_KEY))
